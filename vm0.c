@@ -1,17 +1,15 @@
 #include "@/public/vm0.h"
 
+#include <errno.h>
 #include <github.com/apronchenkov/vm/public/stack_push_pop.h>
 #include <github.com/apronchenkov/vm/public/state.h>
-
-#include <errno.h>
 #include <inttypes.h>
 #include <math.h>
 
-static void
-u7_vm0_stack_frame_layout_deinit(struct u7_vm_stack_frame_layout const *self,
-                                 void *memory) {
+static void u7_vm0_stack_frame_layout_deinit(
+    struct u7_vm_stack_frame_layout const* self, void* memory) {
   (void)self;
-  u7_error_clear(&((struct u7_vm0_globals *)memory)->error);
+  u7_error_clear(&((struct u7_vm0_globals*)memory)->error);
 }
 
 static struct u7_vm_stack_frame_layout u7_vm0_globals_frame_layout_impl = {
@@ -22,12 +20,12 @@ static struct u7_vm_stack_frame_layout u7_vm0_globals_frame_layout_impl = {
     .description = "u7_vm0_globals",
 };
 
-struct u7_vm_stack_frame_layout const *const u7_vm0_globals_frame_layout =
+struct u7_vm_stack_frame_layout const* const u7_vm0_globals_frame_layout =
     &u7_vm0_globals_frame_layout_impl;
 
-static bool u7_vm0_panic(struct u7_vm_state *state, u7_error err) {
+static bool u7_vm0_panic(struct u7_vm_state* state, u7_error err) {
   assert(err.error_code != 0);
-  struct u7_vm0_globals *globals = u7_vm0_state_globals(state);
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->error.error_code == 0);
   if (globals->error.error_code != 0) {
     u7_error_clear(&globals->error);
@@ -38,17 +36,17 @@ static bool u7_vm0_panic(struct u7_vm_state *state, u7_error err) {
 
 // u7_vm0_load_constant
 
-#define U7_VM0_DEFINE_INSTRUCTION_EXEC(fn_name)                                \
+#define U7_VM0_DEFINE_INSTRUCTION_EXEC(fn_name) \
   U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, struct u7_vm0_instruction)
 
-#define U7_VM0_DEFINE_INSTRUCTION_0(name)                                      \
-  struct u7_vm0_instruction u7_vm0_##name() {                                  \
-    struct u7_vm0_instruction result = {.base = {.execute_fn = name##_exec}};  \
-    return result;                                                             \
+#define U7_VM0_DEFINE_INSTRUCTION_0(name)                                     \
+  struct u7_vm0_instruction u7_vm0_##name() {                                 \
+    struct u7_vm0_instruction result = {.base = {.execute_fn = name##_exec}}; \
+    return result;                                                            \
   }
 
 U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f32_exec) {
-  struct u7_vm0_globals *globals = u7_vm0_state_globals(state);
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->input != NULL);
   float value;
   u7_error err = globals->input->read_f32_fn(globals->input, &value);
@@ -62,7 +60,7 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f32_exec) {
 U7_VM0_DEFINE_INSTRUCTION_0(read_f32)
 
 U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f32_exec) {
-  struct u7_vm0_globals *globals = u7_vm0_state_globals(state);
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->output != NULL);
   assert(globals->error.error_code == 0);
   u7_error err = globals->output->write_f32_fn(

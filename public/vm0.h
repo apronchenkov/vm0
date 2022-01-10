@@ -1,6 +1,9 @@
 #ifndef U7_VM_PL0_H_
 #define U7_VM_PL0_H_
 
+#include "@/public/input.h"
+#include "@/public/output.h"
+
 #include <github.com/apronchenkov/error/public/error.h>
 #include <github.com/apronchenkov/vm/public/instruction.h>
 #include <github.com/apronchenkov/vm/public/state.h>
@@ -9,46 +12,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
-
-// Input facility.
-
-struct u7_vm0_input;
-
-typedef u7_error (*u7_vm0_input_read_i32_fn_t)(struct u7_vm0_input* self,
-                                               int32_t* result);
-typedef u7_error (*u7_vm0_input_read_i64_fn_t)(struct u7_vm0_input* self,
-                                               int64_t* result);
-typedef u7_error (*u7_vm0_input_read_f32_fn_t)(struct u7_vm0_input* self,
-                                               float* result);
-typedef u7_error (*u7_vm0_input_read_f64_fn_t)(struct u7_vm0_input* self,
-                                               double* result);
-
-struct u7_vm0_input {
-  u7_vm0_input_read_i32_fn_t read_i32_fn;
-  u7_vm0_input_read_i64_fn_t read_i64_fn;
-  u7_vm0_input_read_f32_fn_t read_f32_fn;
-  u7_vm0_input_read_f64_fn_t read_f64_fn;
-};
-
-// Output facility.
-
-struct u7_vm0_output;
-
-typedef u7_error (*u7_vm0_output_write_i32_fn_t)(struct u7_vm0_output* self,
-                                                 int32_t value);
-typedef u7_error (*u7_vm0_output_write_i64_fn_t)(struct u7_vm0_output* self,
-                                                 int64_t value);
-typedef u7_error (*u7_vm0_output_write_f32_fn_t)(struct u7_vm0_output* self,
-                                                 float value);
-typedef u7_error (*u7_vm0_output_write_f64_fn_t)(struct u7_vm0_output* self,
-                                                 double value);
-
-struct u7_vm0_output {
-  u7_vm0_output_write_i32_fn_t write_i32_fn;
-  u7_vm0_output_write_i64_fn_t write_i64_fn;
-  u7_vm0_output_write_f32_fn_t write_f32_fn;
-  u7_vm0_output_write_f64_fn_t write_f64_fn;
-};
 
 // Endpoints for interaction with VM.
 

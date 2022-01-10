@@ -2,9 +2,13 @@ cc_library(
     name='vm0',
     headers=[
         'public/vm0.h',
+        'public/input.h',
+        'public/output.h',
     ],
     srcs=[
         'vm0.c',
+        'input.c',
+        'output.c',
     ],
     deps=[
         '//github.com/apronchenkov/error:error',
