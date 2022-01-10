@@ -1,0 +1,25 @@
+cc_library(
+    name='vm0',
+    headers=[
+        'public/vm0.h',
+    ],
+    srcs=[
+        'vm0.c',
+    ],
+    deps=[
+        '//github.com/apronchenkov/error:error',
+        '//github.com/apronchenkov/vm:vm',
+    ],
+)
+
+cc_binary(
+    name='test',
+    srcs=[
+        'test.c',
+    ],
+    deps=[
+        ':vm0',
+        '//github.com/apronchenkov/vm:vm',
+        '//github.com/apronchenkov/error:error',
+    ],
+)
