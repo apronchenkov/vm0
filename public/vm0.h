@@ -51,11 +51,19 @@ struct u7_vm0_instruction {
   union u7_vm0_value arg2;
 };
 
+struct u7_vm0_instruction u7_vm0_yield();
+struct u7_vm0_instruction u7_vm0_ret();
+
 // Instructions: input.
+struct u7_vm0_instruction u7_vm0_read_i32();
+struct u7_vm0_instruction u7_vm0_read_i64();
 struct u7_vm0_instruction u7_vm0_read_f32();
 struct u7_vm0_instruction u7_vm0_read_f64();
 
+struct u7_vm0_instruction u7_vm0_write_i32();
+struct u7_vm0_instruction u7_vm0_write_i64();
 struct u7_vm0_instruction u7_vm0_write_f32();
+struct u7_vm0_instruction u7_vm0_write_f64();
 
 // struct u7_vm0_instruction u7_vm0_load_constant_i32(int32_t value);
 // struct u7_vm0_instruction u7_vm0_load_constant_i64(int64_t value);
@@ -204,8 +212,6 @@ struct u7_vm0_instruction u7_vm0_write_f32();
 // struct u7_vm0_instruction u7_vm0_print_f32();
 // struct u7_vm0_instruction u7_vm0_print_f64();
 // struct u7_vm0_instruction u7_vm0_println();
-
-struct u7_vm0_instruction u7_vm0_yield();
 
 // struct u7_vm0_instruction u7_vm0_dump_state();
 

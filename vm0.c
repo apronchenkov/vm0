@@ -23,7 +23,8 @@ static struct u7_vm_stack_frame_layout u7_vm0_globals_frame_layout_impl = {
 struct u7_vm_stack_frame_layout const* const u7_vm0_globals_frame_layout =
     &u7_vm0_globals_frame_layout_impl;
 
-static bool u7_vm0_panic(struct u7_vm_state* state, u7_error err) {
+__attribute__((noinline)) static bool u7_vm0_panic(struct u7_vm_state* state,
+                                                   u7_error err) {
   assert(err.error_code != 0);
   struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->error.error_code == 0);
@@ -31,21 +32,70 @@ static bool u7_vm0_panic(struct u7_vm_state* state, u7_error err) {
     u7_error_clear(&globals->error);
   }
   globals->error = err;
+  state->ip = 0;  // Reset to the beginning.
+  assert(state->stack.top_offset >=
+         state->stack.base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
+             u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  state->stack.top_offset =
+      state->stack.base_offset +       // Assume, that the stack values
+      U7_VM_STACK_FRAME_HEADER_SIZE +  // need no destruction work.
+      u7_vm_stack_current_frame_layout(&state->stack)->locals_size;
   return false;
 }
 
-// u7_vm0_load_constant
-
 #define U7_VM0_DEFINE_INSTRUCTION_EXEC(fn_name) \
-  U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, struct u7_vm0_instruction)
+  U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name##_exec, struct u7_vm0_instruction)
 
-#define U7_VM0_DEFINE_INSTRUCTION_0(name)                                     \
-  struct u7_vm0_instruction u7_vm0_##name() {                                 \
-    struct u7_vm0_instruction result = {.base = {.execute_fn = name##_exec}}; \
-    return result;                                                            \
+#define U7_VM0_DEFINE_INSTRUCTION_0(fn_name)     \
+  struct u7_vm0_instruction u7_vm0_##fn_name() { \
+    struct u7_vm0_instruction result = {         \
+        .base = {.execute_fn = fn_name##_exec}}; \
+    return result;                               \
   }
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f32_exec) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(yield) { return false; }
+
+U7_VM0_DEFINE_INSTRUCTION_0(yield)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(ret) {
+  state->ip = 0;  // Reset to the beginning.
+  assert(state->stack.top_offset ==
+         state->stack.base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
+             u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  return false;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(ret)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(read_i32) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->input != NULL);
+  int32_t value;
+  u7_error err = globals->input->read_i32_fn(globals->input, &value);
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_push_i32(&state->stack, value);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(read_i32)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(read_i64) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->input != NULL);
+  int64_t value;
+  u7_error err = globals->input->read_i64_fn(globals->input, &value);
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_push_i64(&state->stack, value);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(read_i64)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f32) {
   struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->input != NULL);
   float value;
@@ -59,7 +109,51 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f32_exec) {
 
 U7_VM0_DEFINE_INSTRUCTION_0(read_f32)
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f32_exec) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(read_f64) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->input != NULL);
+  double value;
+  u7_error err = globals->input->read_f64_fn(globals->input, &value);
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_push_f64(&state->stack, value);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(read_f64)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(write_i32) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->output != NULL);
+  assert(globals->error.error_code == 0);
+  u7_error err = globals->output->write_i32_fn(
+      globals->output, *u7_vm_stack_peek_i32(&state->stack));
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_pop_i32(&state->stack);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(write_i32)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(write_i64) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->output != NULL);
+  assert(globals->error.error_code == 0);
+  u7_error err = globals->output->write_i64_fn(
+      globals->output, *u7_vm_stack_peek_i64(&state->stack));
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_pop_i64(&state->stack);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(write_i64)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f32) {
   struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
   assert(globals->output != NULL);
   assert(globals->error.error_code == 0);
@@ -73,6 +167,21 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f32_exec) {
 }
 
 U7_VM0_DEFINE_INSTRUCTION_0(write_f32)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f64) {
+  struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
+  assert(globals->output != NULL);
+  assert(globals->error.error_code == 0);
+  u7_error err = globals->output->write_f64_fn(
+      globals->output, *u7_vm_stack_peek_f64(&state->stack));
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  u7_vm_stack_pop_f64(&state->stack);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_0(write_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(load_constant_i32_exec) { */
 /*   u7_vm_stack_push_i32(&state->stack, self->arg1.i32); */
@@ -1434,12 +1543,6 @@ U7_VM0_DEFINE_INSTRUCTION_0(write_f32)
 /* U7_VM0_DEFINE_INSTRUCTION_0(print_f32) */
 /* U7_VM0_DEFINE_INSTRUCTION_0(print_f64) */
 /* U7_VM0_DEFINE_INSTRUCTION_0(println) */
-
-// yield
-
-U7_VM0_DEFINE_INSTRUCTION_EXEC(yield_exec) { return false; }
-
-U7_VM0_DEFINE_INSTRUCTION_0(yield)
 
 /* // dump_state */
 

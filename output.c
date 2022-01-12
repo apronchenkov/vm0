@@ -7,7 +7,7 @@
 
 static u7_error write_i32(struct u7_vm0_output* self, int32_t value) {
   (void)self;
-  if (0 > printf("%" PRId32, value)) {
+  if (0 > printf("%" PRId32 " ", value)) {
     return u7_errnof(errno, "write_i32: failed");
   }
   return u7_ok();
@@ -15,7 +15,7 @@ static u7_error write_i32(struct u7_vm0_output* self, int32_t value) {
 
 static u7_error write_i64(struct u7_vm0_output* self, int64_t value) {
   (void)self;
-  if (0 > printf("%" PRId64, value)) {
+  if (0 > printf("%" PRId64 " ", value)) {
     return u7_errnof(errno, "write_i64: failed");
   }
   return u7_ok();
@@ -23,7 +23,7 @@ static u7_error write_i64(struct u7_vm0_output* self, int64_t value) {
 
 static u7_error write_f32(struct u7_vm0_output* self, float value) {
   (void)self;
-  if (0 > printf("%f", value)) {
+  if (0 > printf("%f ", value)) {
     return u7_errnof(errno, "write_f32: failed");
   }
   return u7_ok();
@@ -31,7 +31,7 @@ static u7_error write_f32(struct u7_vm0_output* self, float value) {
 
 static u7_error write_f64(struct u7_vm0_output* self, double value) {
   (void)self;
-  if (1 != printf("%lf", value)) {
+  if (1 != printf("%lf ", value)) {
     return u7_errnof(errno, "write_f64: failed");
   }
   return u7_ok();

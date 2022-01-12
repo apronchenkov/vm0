@@ -21,7 +21,7 @@ u7_error Main() {
       /*     u7_vm0_cast_i64_to_f32(), */
       /*     u7_vm0_print_f32(), */
       /*     u7_vm0_println(), */
-      u7_vm0_yield(),
+      u7_vm0_ret(),
   };
 
   struct u7_vm_instruction const* js[sizeof(is) / sizeof(is[0])];
@@ -34,10 +34,13 @@ u7_error Main() {
 
   u7_vm0_state_globals(&state)->input = &u7_vm0_input_scanf;
   u7_vm0_state_globals(&state)->output = &u7_vm0_output_printf;
-  u7_vm_state_run(&state);
-  u7_error result = u7_error_acquire(u7_vm0_state_globals(&state)->error);
+  u7_error error = u7_ok();
+  while (error.error_code == 0) {
+    u7_vm_state_run(&state);
+    error = u7_error_move(&u7_vm0_state_globals(&state)->error);
+  }
   u7_vm_state_destroy(&state);
-  return result;
+  return error;
 }
 
 int main() {
