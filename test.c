@@ -31,10 +31,14 @@ u7_error Main() {
 
   U7_RETURN_IF_ERROR(u7_vm_state_init(&state, u7_vm0_globals_frame_layout,
                                       &js[0], sizeof(js) / sizeof(js[0])));
-
   u7_vm0_state_globals(&state)->input = &u7_vm0_input_scanf;
   u7_vm0_state_globals(&state)->output = &u7_vm0_output_printf;
-  u7_error error = u7_ok();
+
+  static struct u7_vm_stack_frame_layout local_frame_layout = {
+      .extra_capacity = 1024,
+      .description = "locals",
+  };
+  u7_error error = u7_vm_stack_push_frame(&state.stack, &local_frame_layout);
   while (error.error_code == 0) {
     u7_vm_state_run(&state);
     error = u7_error_move(&u7_vm0_state_globals(&state)->error);

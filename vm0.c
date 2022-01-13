@@ -16,7 +16,7 @@ static struct u7_vm_stack_frame_layout u7_vm0_globals_frame_layout_impl = {
     .locals_size = u7_vm_align_size(sizeof(struct u7_vm0_globals),
                                     U7_VM_DEFAULT_ALIGNMENT),
     .deinit_fn = &u7_vm0_stack_frame_layout_deinit,
-    .extra_capacity = 64,
+    .extra_capacity = 0,
     .description = "u7_vm0_globals",
 };
 
