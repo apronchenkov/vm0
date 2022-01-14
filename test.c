@@ -10,9 +10,10 @@ u7_error Main() {
   struct u7_vm_state state;
 
   struct u7_vm0_instruction is[] = {
+      u7_vm0_load_constant_i64(INT32_MAX),
+      u7_vm0_write_i64(),
       u7_vm0_read_f32(),
       u7_vm0_write_f32(),
-      /*     u7_vm0_load_constant_i64(INT32_MAX), */
       /*     u7_vm0_load_constant_i64(-1), */
       /*     u7_vm0_multiply_i64(), */
       /*     u7_vm0_duplicate_i64(), */
