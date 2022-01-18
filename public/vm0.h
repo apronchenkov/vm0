@@ -23,9 +23,63 @@ struct u7_vm0_globals {
 
 extern struct u7_vm_stack_frame_layout const* const u7_vm0_globals_frame_layout;
 
+// Returns pointer to the global structure.
 static inline struct u7_vm0_globals* u7_vm0_state_globals(
     struct u7_vm_state* state) {
   return (struct u7_vm0_globals*)u7_vm_state_globals(state);
+}
+
+// Returns pointer to the input interface stored in the global structure.
+static inline struct u7_vm0_input* u7_vm0_state_global_input(
+    struct u7_vm_state* state) {
+  struct u7_vm0_input* result = u7_vm0_state_globals(state)->input;
+  assert(result != NULL);
+  return result;
+}
+
+// Returns pointer to the output interface stored in the global structure.
+static inline struct u7_vm0_output* u7_vm0_state_global_output(
+    struct u7_vm_state* state) {
+  struct u7_vm0_output* result = u7_vm0_state_globals(state)->output;
+  assert(result != NULL);
+  return result;
+}
+
+// Returns pointer to a local variable.
+static inline int32_t* u7_vm0_state_local_i32(struct u7_vm_state* state,
+                                              int64_t offset) {
+  assert(offset % u7_vm_alignof(int32_t) == 0);
+  assert(offset >= 0);
+  assert(offset + sizeof(int32_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  return (int32_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset);
+}
+
+static inline int64_t* u7_vm0_state_local_i64(struct u7_vm_state* state,
+                                              int64_t offset) {
+  assert(offset % u7_vm_alignof(int64_t) == 0);
+  assert(offset >= 0);
+  assert(offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  return (int64_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset);
+}
+
+static inline float* u7_vm0_state_local_f32(struct u7_vm_state* state,
+                                            int64_t offset) {
+  assert(offset % u7_vm_alignof(float) == 0);
+  assert(offset >= 0);
+  assert(offset + sizeof(float) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  return (float*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset);
+}
+
+static inline double* u7_vm0_state_local_f64(struct u7_vm_state* state,
+                                             int64_t offset) {
+  assert(offset % u7_vm_alignof(double) == 0);
+  assert(offset >= 0);
+  assert(offset + sizeof(double) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  return (double*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset);
 }
 
 // Instructions.
@@ -37,19 +91,45 @@ union u7_vm0_value {
   double f64;
 };
 
-struct u7_vm0_local_variable {
-  int64_t offset;  // non-negative
+enum u7_vm0_arg_kind {
+  U7_VM0_ARG_KIND_I32_CONSTANT,
+  U7_VM0_ARG_KIND_I64_CONSTANT,
+  U7_VM0_ARG_KIND_F32_CONSTANT,
+  U7_VM0_ARG_KIND_F64_CONSTANT,
+  U7_VM0_ARG_KIND_I32_VARIABLE,
+  U7_VM0_ARG_KIND_I64_VARIABLE,
+  U7_VM0_ARG_KIND_F32_VARIABLE,
+  U7_VM0_ARG_KIND_F64_VARIABLE,
 };
 
-struct u7_vm0_local_label {
-  int64_t offset;
+struct u7_vm0_arg {
+  enum u7_vm0_arg_kind kind;
+  union u7_vm0_value value;
 };
 
 struct u7_vm0_instruction {
   struct u7_vm_instruction base;
   union u7_vm0_value arg1;
   union u7_vm0_value arg2;
+  union u7_vm0_value arg3;
 };
+
+struct u7_vm0_instruction u7_vm0_input(u7_error* error, struct u7_vm0_arg dst);
+struct u7_vm0_instruction u7_vm0_output(u7_error* error, struct u7_vm0_arg dst);
+struct u7_vm0_instruction u7_vm0_copy(u7_error* error, struct u7_vm0_arg dst,
+                                      struct u7_vm0_arg src);
+
+/*
+X read_i64
+X write_i64
+X store_i64(local_variable, c)
+bitwise_and_i64(local_variable, local_variable, c)
+bitwise_shift_right_i64(local_variable, local_variable, c)
+jump_if_zero(local_variable, local_label)
+jump_if_not_zero(local_variable, local_label)
+math_multiply(local_variable, local_variable, local_variable)
+math_add(local_variable, local_variable, local_variable)
+*/
 
 struct u7_vm0_instruction u7_vm0_yield();
 struct u7_vm0_instruction u7_vm0_ret();
@@ -65,31 +145,37 @@ struct u7_vm0_instruction u7_vm0_write_i64();
 struct u7_vm0_instruction u7_vm0_write_f32();
 struct u7_vm0_instruction u7_vm0_write_f64();
 
+// Store constant.
+struct u7_vm0_instruction u7_vm0_push_constant_i32(int32_t value);
+struct u7_vm0_instruction u7_vm0_push_constant_i64(int64_t value);
+struct u7_vm0_instruction u7_vm0_push_constant_f32(float value);
+struct u7_vm0_instruction u7_vm0_push_constant_f64(double value);
+
 // Load constant.
-struct u7_vm0_instruction u7_vm0_load_constant_i32(int32_t value);
-struct u7_vm0_instruction u7_vm0_load_constant_i64(int64_t value);
-struct u7_vm0_instruction u7_vm0_load_constant_f32(float value);
-struct u7_vm0_instruction u7_vm0_load_constant_f64(double value);
+struct u7_vm0_instruction u7_vm0_push_constant_i32(int32_t value);
+struct u7_vm0_instruction u7_vm0_push_constant_i64(int64_t value);
+struct u7_vm0_instruction u7_vm0_push_constant_f32(float value);
+struct u7_vm0_instruction u7_vm0_push_constant_f64(double value);
 
 // Load from the current stack frame locals.
-struct u7_vm0_instruction u7_vm0_load_local_i32(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_load_local_i64(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_load_local_f32(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_load_local_f64(
-    struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_load_local_i32(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_load_local_i64(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_load_local_f32(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_load_local_f64(
+//     struct u7_vm0_local_variable var);
 
-// Store to the current frame locals.
-struct u7_vm0_instruction u7_vm0_store_local_i32(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_store_local_i64(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_store_local_f32(
-    struct u7_vm0_local_variable var);
-struct u7_vm0_instruction u7_vm0_store_local_f64(
-    struct u7_vm0_local_variable var);
+// // Store to the current frame locals.
+// struct u7_vm0_instruction u7_vm0_store_local_i32(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_store_local_i64(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_store_local_f32(
+//     struct u7_vm0_local_variable var);
+// struct u7_vm0_instruction u7_vm0_store_local_f64(
+//     struct u7_vm0_local_variable var);
 
 struct u7_vm0_instruction u7_vm0_compare_i32();
 struct u7_vm0_instruction u7_vm0_compare_i64();

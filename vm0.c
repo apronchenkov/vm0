@@ -43,6 +43,48 @@ __attribute__((noinline)) static bool u7_vm0_panic(struct u7_vm_state* state,
   return false;
 }
 
+__attribute__((noinline)) static u7_error u7_vm0_unsupported_arg_kind_error(
+    const char* instruction_name, const char* arg_name,
+    enum u7_vm0_arg_kind arg_kind) {
+  switch (arg_kind) {
+    case U7_VM0_ARG_KIND_I32_CONSTANT:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: int32 constant",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_I64_CONSTANT:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: int64 constant",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_F32_CONSTANT:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: float32 constant",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_F64_CONSTANT:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: float64 constant",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: int32 variable",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: int64 variable",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: float32 variable",
+                       instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      return u7_errnof(EINVAL,
+                       "%s: incompatible argument kind: %s: float64 variable",
+                       instruction_name, arg_name);
+  }
+  return u7_errnof(EINVAL,
+                   "%s: incompatible argument kind: %s: unknown arg kind (%d)",
+                   instruction_name, arg_name, (int)arg_kind);
+}
+
 #define U7_VM0_DEFINE_INSTRUCTION_EXEC(fn_name) \
   U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name##_exec, struct u7_vm0_instruction)
 
@@ -66,6 +108,311 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(ret) {
 }
 
 U7_VM0_DEFINE_INSTRUCTION_0(ret)
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(input_i32v) {
+  struct u7_vm0_input* input = u7_vm0_state_global_input(state);
+  u7_error error =
+      input->read_i32_fn(input, u7_vm0_state_local_i32(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(input_i64v) {
+  struct u7_vm0_input* input = u7_vm0_state_global_input(state);
+  u7_error error =
+      input->read_i64_fn(input, u7_vm0_state_local_i64(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(input_f32v) {
+  struct u7_vm0_input* input = u7_vm0_state_global_input(state);
+  u7_error err =
+      input->read_f32_fn(input, u7_vm0_state_local_f32(state, self->arg1.i64));
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(input_f64v) {
+  struct u7_vm0_input* input = u7_vm0_state_global_input(state);
+  u7_error err =
+      input->read_f64_fn(input, u7_vm0_state_local_f64(state, self->arg1.i64));
+  if (err.error_code != 0) {
+    return u7_vm0_panic(state, err);
+  }
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_input(u7_error* error, struct u7_vm0_arg dst) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  switch (dst.kind) {
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      result.base.execute_fn = input_i32v_exec;
+      break;
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      result.base.execute_fn = input_i64v_exec;
+      break;
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      result.base.execute_fn = input_f32v_exec;
+      break;
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      result.base.execute_fn = input_f64v_exec;
+      break;
+    default:
+      *error =
+          u7_vm0_unsupported_arg_kind_error("u7_vm0_input", "dst", dst.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_i32c) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_i32_fn(output, self->arg1.i32);
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_i64c) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_i64_fn(output, self->arg1.i64);
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_f32c) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_f32_fn(output, self->arg1.f32);
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_f64c) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_f64_fn(output, self->arg1.f64);
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_i32v) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_i32_fn(
+      output, *u7_vm0_state_local_i32(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_i64v) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_i64_fn(
+      output, *u7_vm0_state_local_i64(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_f32v) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_f32_fn(
+      output, *u7_vm0_state_local_f32(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(output_f64v) {
+  struct u7_vm0_output* output = u7_vm0_state_global_output(state);
+  u7_error error = output->write_f64_fn(
+      output, *u7_vm0_state_local_f64(state, self->arg1.i64));
+  if (error.error_code != 0) {
+    return u7_vm0_panic(state, error);
+  }
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_output(u7_error* error,
+                                        struct u7_vm0_arg src) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = src.value;
+  switch (src.kind) {
+    case U7_VM0_ARG_KIND_I32_CONSTANT:
+      result.base.execute_fn = output_i32c_exec;
+      break;
+    case U7_VM0_ARG_KIND_I64_CONSTANT:
+      result.base.execute_fn = output_i64c_exec;
+      break;
+    case U7_VM0_ARG_KIND_F32_CONSTANT:
+      result.base.execute_fn = output_f32c_exec;
+      break;
+    case U7_VM0_ARG_KIND_F64_CONSTANT:
+      result.base.execute_fn = output_f64c_exec;
+      break;
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      result.base.execute_fn = output_i32v_exec;
+      break;
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      result.base.execute_fn = output_i64v_exec;
+      break;
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      result.base.execute_fn = output_f32v_exec;
+      break;
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      result.base.execute_fn = output_f64v_exec;
+      break;
+    default:
+      *error =
+          u7_vm0_unsupported_arg_kind_error("u7_vm0_output", "src", src.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_i32c) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) = self->arg2.i32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_i64c) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) = self->arg2.i64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_f32c) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) = self->arg2.f32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_f64c) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) = self->arg2.f64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_i32v) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) =
+      *u7_vm0_state_local_i32(state, self->arg2.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_i64v) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) =
+      *u7_vm0_state_local_i64(state, self->arg2.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_f32v) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) =
+      *u7_vm0_state_local_f32(state, self->arg2.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(copy_f64v) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) =
+      *u7_vm0_state_local_f64(state, self->arg2.i64);
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_copy(u7_error* error, struct u7_vm0_arg dst,
+                                      struct u7_vm0_arg src) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  result.arg2 = src.value;
+  switch (src.kind) {
+    case U7_VM0_ARG_KIND_I32_CONSTANT:
+      if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = copy_i32c_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_i32", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_I64_CONSTANT:
+      if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = copy_i64c_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_i64", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_F32_CONSTANT:
+      if (dst.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+        result.base.execute_fn = copy_f32c_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_f32", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_F64_CONSTANT:
+      if (dst.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+        result.base.execute_fn = copy_f64c_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_f64", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = copy_i32v_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_i32", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = copy_i64v_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_i64", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      if (dst.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+        result.base.execute_fn = copy_f32v_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_f32", "dst",
+                                                   dst.kind);
+      }
+      break;
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      if (dst.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+        result.base.execute_fn = copy_f64v_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_copy_f64", "dst",
+                                                   dst.kind);
+      }
+      break;
+    default:
+      *error =
+          u7_vm0_unsupported_arg_kind_error("u7_vm0_copy", "src", src.kind);
+  }
+  return result;
+}
 
 U7_VM0_DEFINE_INSTRUCTION_EXEC(read_i32) {
   struct u7_vm0_globals* globals = u7_vm0_state_globals(state);
@@ -183,267 +530,280 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(write_f64) {
 
 U7_VM0_DEFINE_INSTRUCTION_0(write_f64)
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_constant_i32) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(push_constant_i32) {
   u7_vm_stack_push_i32(&state->stack, self->arg1.i32);
   return true;
 }
 
-struct u7_vm0_instruction u7_vm0_load_constant_i32(int32_t value) {
+struct u7_vm0_instruction u7_vm0_push_constant_i32(int32_t value) {
   struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_constant_i32_exec},
+      .base = {.execute_fn = &push_constant_i32_exec},
       .arg1 = {.i32 = value},
   };
   return result;
 }
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_constant_i64) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(push_constant_i64) {
   u7_vm_stack_push_i64(&state->stack, self->arg1.i64);
   return true;
 }
 
-struct u7_vm0_instruction u7_vm0_load_constant_i64(int64_t value) {
+struct u7_vm0_instruction u7_vm0_push_constant_i64(int64_t value) {
   struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_constant_i64_exec},
+      .base = {.execute_fn = &push_constant_i64_exec},
       .arg1 = {.i64 = value},
   };
   return result;
 }
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_constant_f32) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(push_constant_f32) {
   u7_vm_stack_push_f32(&state->stack, self->arg1.f32);
   return true;
 }
 
-struct u7_vm0_instruction u7_vm0_load_constant_f32(float value) {
+struct u7_vm0_instruction u7_vm0_push_constant_f32(float value) {
   struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_constant_f32_exec},
+      .base = {.execute_fn = &push_constant_f32_exec},
       .arg1 = {.f32 = value},
   };
   return result;
 }
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_constant_f64) {
+U7_VM0_DEFINE_INSTRUCTION_EXEC(push_constant_f64) {
   u7_vm_stack_push_f64(&state->stack, self->arg1.f64);
   return true;
 }
 
-struct u7_vm0_instruction u7_vm0_load_constant_f64(double value) {
+struct u7_vm0_instruction u7_vm0_push_constant_f64(double value) {
   struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_constant_f64_exec},
+      .base = {.execute_fn = &push_constant_f64_exec},
       .arg1 = {.f64 = value},
   };
   return result;
 }
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_local_i32) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(int32_t) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(int32_t) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  u7_vm_stack_push_i32(&state->stack, *(int32_t*)u7_vm_memory_add_offset(
-                                          u7_vm_state_locals(state), offset));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(push_local_i32) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(int32_t) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(int32_t) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   u7_vm_stack_push_i32(&state->stack, *(int32_t*)u7_vm_memory_add_offset(
+ */
+/*                                           u7_vm_state_locals(state),
+ * offset)); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_load_local_i32(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_local_i32_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_push_local_i32( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &push_local_i32_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_local_i64) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(int64_t) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(int64_t) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  u7_vm_stack_push_i64(&state->stack, *(int64_t*)u7_vm_memory_add_offset(
-                                          u7_vm_state_locals(state), offset));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(push_local_i64) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(int64_t) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(int64_t) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   u7_vm_stack_push_i64(&state->stack, *(int64_t*)u7_vm_memory_add_offset(
+ */
+/*                                           u7_vm_state_locals(state),
+ * offset)); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_load_local_i64(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_local_i64_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_push_local_i64( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &push_local_i64_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_local_f32) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(float) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(float) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  u7_vm_stack_push_f32(&state->stack, *(float*)u7_vm_memory_add_offset(
-                                          u7_vm_state_locals(state), offset));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(push_local_f32) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(float) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(float) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   u7_vm_stack_push_f32(&state->stack, *(float*)u7_vm_memory_add_offset( */
+/*                                           u7_vm_state_locals(state),
+ * offset)); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_load_local_f32(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_local_f32_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_push_local_f32( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &push_local_f32_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(load_local_f64) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(double) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(double) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  u7_vm_stack_push_f32(&state->stack, *(double*)u7_vm_memory_add_offset(
-                                          u7_vm_state_locals(state), offset));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(push_local_f64) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(double) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(double) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   u7_vm_stack_push_f32(&state->stack, *(double*)u7_vm_memory_add_offset( */
+/*                                           u7_vm_state_locals(state),
+ * offset)); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_load_local_f64(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &load_local_f64_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_push_local_f64( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &push_local_f64_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_i32) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(int32_t) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(int32_t) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  *(int32_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
-      u7_vm_stack_pop_i32(&state->stack);
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_i32) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(int32_t) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(int32_t) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   *(int32_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
+ */
+/*       u7_vm_stack_pop_i32(&state->stack); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_store_local_i32(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &store_local_i32_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_store_local_i32( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &store_local_i32_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_i64) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(int64_t) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(int64_t) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  *(int64_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
-      u7_vm_stack_pop_i64(&state->stack);
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_i64) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(int64_t) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(int64_t) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   *(int64_t*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
+ */
+/*       u7_vm_stack_pop_i64(&state->stack); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_store_local_i64(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &store_local_i64_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_store_local_i64( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &store_local_i64_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_f32) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(float) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(float) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  *(float*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
-      u7_vm_stack_pop_f32(&state->stack);
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_f32) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(float) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(float) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   *(float*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) = */
+/*       u7_vm_stack_pop_f32(&state->stack); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_store_local_f32(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &store_local_f32_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_store_local_f32( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &store_local_f32_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_f64) {
-  int64_t offset = self->arg1.i64;
-  assert(offset % u7_vm_alignof(double) == 0);
-  assert(offset >= 0);
-  assert(offset + sizeof(double) <=
-         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
-  *(double*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) =
-      u7_vm_stack_pop_f64(&state->stack);
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(store_local_f64) { */
+/*   int64_t offset = self->arg1.i64; */
+/*   assert(offset % u7_vm_alignof(double) == 0); */
+/*   assert(offset >= 0); */
+/*   assert(offset + sizeof(double) <= */
+/*          u7_vm_stack_current_frame_layout(&state->stack)->locals_size); */
+/*   *(double*)u7_vm_memory_add_offset(u7_vm_state_locals(state), offset) = */
+/*       u7_vm_stack_pop_f64(&state->stack); */
+/*   return true; */
+/* } */
 
-struct u7_vm0_instruction u7_vm0_store_local_f64(
-    struct u7_vm0_local_variable var) {
-  assert(var.offset >= 0);
-  struct u7_vm0_instruction result = {
-      .base = {.execute_fn = &store_local_f64_exec},
-      .arg1 = {.i64 = var.offset},
-  };
-  return result;
-}
+/* struct u7_vm0_instruction u7_vm0_store_local_f64( */
+/*     struct u7_vm0_local_variable var) { */
+/*   assert(var.offset >= 0); */
+/*   struct u7_vm0_instruction result = { */
+/*       .base = {.execute_fn = &store_local_f64_exec}, */
+/*       .arg1 = {.i64 = var.offset}, */
+/*   }; */
+/*   return result; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_i32) {
-  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
-  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_i32) { */
+/*   int32_t rhs = u7_vm_stack_pop_i32(&state->stack); */
+/*   int32_t lhs = u7_vm_stack_pop_i32(&state->stack); */
+/*   u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 :
+ * 0))); */
+/*   return true; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_0(compare_i32)
+/* U7_VM0_DEFINE_INSTRUCTION_0(compare_i32) */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_i64_exec) {
-  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
-  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_i64_exec) { */
+/*   int64_t rhs = u7_vm_stack_pop_i64(&state->stack); */
+/*   int64_t lhs = u7_vm_stack_pop_i64(&state->stack); */
+/*   u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 :
+ * 0))); */
+/*   return true; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_0(compare_i64)
+/* U7_VM0_DEFINE_INSTRUCTION_0(compare_i64) */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_f32_exec) {
-  float rhs = u7_vm_stack_pop_f32(&state->stack);
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
-  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_f32_exec) { */
+/*   float rhs = u7_vm_stack_pop_f32(&state->stack); */
+/*   float lhs = u7_vm_stack_pop_f32(&state->stack); */
+/*   u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 :
+ * 0))); */
+/*   return true; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_0(compare_f32)
+/* U7_VM0_DEFINE_INSTRUCTION_0(compare_f32) */
 
-U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_f64_exec) {
-  double rhs = u7_vm_stack_pop_f64(&state->stack);
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
-  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
-  return true;
-}
+/* U7_VM0_DEFINE_INSTRUCTION_EXEC(compare_f64_exec) { */
+/*   double rhs = u7_vm_stack_pop_f64(&state->stack); */
+/*   double lhs = u7_vm_stack_pop_f64(&state->stack); */
+/*   u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 :
+ * 0))); */
+/*   return true; */
+/* } */
 
-U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
+/* U7_VM0_DEFINE_INSTRUCTION_0(compare_f64) */
 
 /* // jump */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) == 0) { */
 /*     state->ip += offset; */
@@ -453,7 +813,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_negative_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) < 0) { */
 /*     state->ip += offset; */
@@ -463,7 +824,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_positive_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) > 0) { */
 /*     state->ip += offset; */
@@ -473,7 +835,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_not_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) != 0) { */
 /*     state->ip += offset; */
@@ -483,7 +846,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_negative_or_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) <= 0) { */
 /*     state->ip += offset; */
@@ -493,7 +857,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i32_positive_or_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i32(&state->stack) >= 0) { */
 /*     state->ip += offset; */
@@ -503,7 +868,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) == 0) { */
 /*     state->ip += offset; */
@@ -513,7 +879,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_negative_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) < 0) { */
 /*     state->ip += offset; */
@@ -523,7 +890,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_positive_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) > 0) { */
 /*     state->ip += offset; */
@@ -533,7 +901,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_not_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) != 0) { */
 /*     state->ip += offset; */
@@ -543,7 +912,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_negative_or_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) <= 0) { */
 /*     state->ip += offset; */
@@ -553,7 +923,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_i64_positive_or_zero_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   if (u7_vm_stack_pop_i64(&state->stack) >= 0) { */
 /*     state->ip += offset; */
@@ -563,7 +934,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_exec) { */
 /*   int64_t offset = self->arg1.i64; */
-/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) || */
+/*   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+ */
 /*          (offset < 0 && state->ip >= -(size_t)offset)); */
 /*   state->ip += offset; */
 /*   return true; */
@@ -892,7 +1264,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /*   int32_t delta = self->arg1.i32; */
 /*   if (__builtin_add_overflow(x, delta, p)) { */
 /*     state->error = u7_errorf(u7_errno_category(), ERANGE, */
-/*                              "integer overflow: u7_vm0_inc_i32 x=%" PRId32 */
+/*                              "integer overflow: u7_vm0_inc_i32 x=%" PRId32
+ */
 /*                              ", delta=%" PRId32, */
 /*                              x, delta); */
 /*     return false; */
@@ -907,7 +1280,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /*   int64_t delta = self->arg1.i64; */
 /*   if (__builtin_add_overflow(x, delta, p)) { */
 /*     state->error = u7_errorf(u7_errno_category(), ERANGE, */
-/*                              "integer overflow: u7_vm0_inc_i64 x=%" PRId64 */
+/*                              "integer overflow: u7_vm0_inc_i64 x=%" PRId64
+ */
 /*                              ", delta=%" PRId64, */
 /*                              x, delta); */
 /*     return false; */
@@ -1004,7 +1378,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /*   int32_t lhs = *p; */
 /*   if (__builtin_add_overflow(lhs, rhs, p)) { */
 /*     state->error = u7_errorf(u7_errno_category(), ERANGE, */
-/*                              "integer overflow: u7_vm0_add_i32 lhs=%" PRId32
+/*                              "integer overflow: u7_vm0_add_i32 lhs=%"
+ * PRId32
  */
 /*                              ", rhs=%" PRId32, */
 /*                              lhs, rhs); */
@@ -1019,7 +1394,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /*   int64_t lhs = *p; */
 /*   if (__builtin_add_overflow(lhs, rhs, p)) { */
 /*     state->error = u7_errorf(u7_errno_category(), ERANGE, */
-/*                              "integer overflow: u7_vm0_add_i64 lhs=%" PRId64
+/*                              "integer overflow: u7_vm0_add_i64 lhs=%"
+ * PRId64
  */
 /*                              ", rhs=%" PRId64, */
 /*                              lhs, rhs); */
@@ -1273,7 +1649,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /* } */
 
 /* struct u7_vm0_instruction u7_vm0_floormod_local_u64( */
-/*     struct u7_vm0_local_variable lhs, struct u7_vm0_local_variable rhs) { */
+/*     struct u7_vm0_local_variable lhs, struct u7_vm0_local_variable rhs) {
+ */
 /*   assert(lhs.offset >= 0); */
 /*   assert(rhs.offset >= 0); */
 /*   struct u7_vm0_instruction result = { */
@@ -1366,17 +1743,20 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /* // cast */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_i32_to_i64_exec) { */
-/*   u7_vm_stack_push_i64(&state->stack, u7_vm_stack_pop_i32(&state->stack)); */
+/*   u7_vm_stack_push_i64(&state->stack, u7_vm_stack_pop_i32(&state->stack));
+ */
 /*   return true; */
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_i32_to_f32_exec) { */
-/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_i32(&state->stack)); */
+/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_i32(&state->stack));
+ */
 /*   return true; */
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_i32_to_f64_exec) { */
-/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_i32(&state->stack)); */
+/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_i32(&state->stack));
+ */
 /*   return true; */
 /* } */
 
@@ -1385,7 +1765,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /*   if (x < INT32_MIN || x > INT32_MAX) { */
 /*     state->error = */
 /*         u7_errorf(u7_errno_category(), ERANGE, */
-/*                   "integer overflow: u7_vm0_cast_i64_to_i32 x=%" PRId64, x);
+/*                   "integer overflow: u7_vm0_cast_i64_to_i32 x=%" PRId64,
+ * x);
  */
 /*     return false; */
 /*   } else { */
@@ -1395,22 +1776,26 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_i64_to_f32_exec) { */
-/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_i64(&state->stack)); */
+/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_i64(&state->stack));
+ */
 /*   return true; */
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_i64_to_f64_exec) { */
-/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_i64(&state->stack)); */
+/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_i64(&state->stack));
+ */
 /*   return true; */
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_f32_to_f64_exec) { */
-/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_f32(&state->stack)); */
+/*   u7_vm_stack_push_f64(&state->stack, u7_vm_stack_pop_f32(&state->stack));
+ */
 /*   return true; */
 /* } */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(cast_f64_to_f32_exec) { */
-/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_f64(&state->stack)); */
+/*   u7_vm_stack_push_f32(&state->stack, u7_vm_stack_pop_f64(&state->stack));
+ */
 /*   return true; */
 /* } */
 
@@ -1470,8 +1855,10 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(trunc_f64_to_i64_exec) { */
 /*   double x = u7_vm_stack_pop_f64(&state->stack); */
 /*   // FIXME(apronchenkov): Make an check exact. */ /*   if (x <
-                                                        (double)INT64_MIN || x >
-                                                        (double)INT64_MAX) { */
+                                                        (double)INT64_MIN || x
+                                                        >
+                                                        (double)INT64_MAX) {
+                                                      */
 /*     state->error = */
 /*         u7_errorf(u7_errno_category(), ERANGE, */
 /*                   "integer overflow: u7_vm0_trunc_f64_to_i64 x=%f", x);
@@ -1524,7 +1911,8 @@ U7_VM0_DEFINE_INSTRUCTION_0(compare_f64)
 /* // dump_state */
 
 /* U7_VM0_DEFINE_INSTRUCTION_EXEC(dump_state_exec) { */
-/*   printf("ip=%zd  bp=%zd  sp=%zd\n", state->ip, state->stack.base_offset, */
+/*   printf("ip=%zd  bp=%zd  sp=%zd\n", state->ip, state->stack.base_offset,
+ */
 /*          state->stack.top_offset); */
 /*   return true; */
 /* } */
