@@ -25,5 +25,6 @@ cc_binary(
         ':vm0',
         '//github.com/apronchenkov/vm:vm',
         '//github.com/apronchenkov/error:error',
+        '//github.com/apronchenkov/yalog:logging',
     ],
 )

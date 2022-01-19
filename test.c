@@ -76,20 +76,31 @@ u7_error Main() {
   struct locals {
     int64_t n;
     int64_t s;
+    int64_t t;
   };
   struct u7_vm0_arg n_var = {
       .kind = U7_VM0_ARG_KIND_I64_VARIABLE,
-      .value = {.i64 = u7_vm_offsetof(struct locals, n)}};
-
+      .value = {.i64 = u7_vm_offsetof(struct locals, n)},
+  };
   struct u7_vm0_arg s_var = {
       .kind = U7_VM0_ARG_KIND_I64_VARIABLE,
-      .value = {.i64 = u7_vm_offsetof(struct locals, s)}};
+      .value = {.i64 = u7_vm_offsetof(struct locals, s)},
+  };
+  struct u7_vm0_arg t_var = {
+      .kind = U7_VM0_ARG_KIND_I64_VARIABLE,
+      .value = {.i64 = u7_vm_offsetof(struct locals, t)},
+  };
+  /* struct u7_vm0_arg i64_1 = { */
+  /*     .kind = U7_VM0_ARG_KIND_I64_CONSTANT, */
+  /*     .value = {.i64 = 1}, */
+  /* }; */
 
   u7_error error = u7_ok();
   struct u7_vm0_instruction is[] = {
       u7_vm0_input(&error, n_var),
-      u7_vm0_copy(&error, s_var, n_var),
-      u7_vm0_output(&error, s_var),
+      u7_vm0_input(&error, s_var),
+      u7_vm0_math_multiply(&error, t_var, n_var, s_var),
+      u7_vm0_output(&error, t_var),
       /* u7_vm0_load_constant_i64(INT32_MAX), */
       /* u7_vm0_write_i64(), */
       /* u7_vm0_read_f32(), */

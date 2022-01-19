@@ -115,20 +115,42 @@ struct u7_vm0_instruction {
 };
 
 struct u7_vm0_instruction u7_vm0_input(u7_error* error, struct u7_vm0_arg dst);
+
 struct u7_vm0_instruction u7_vm0_output(u7_error* error, struct u7_vm0_arg dst);
+
 struct u7_vm0_instruction u7_vm0_copy(u7_error* error, struct u7_vm0_arg dst,
                                       struct u7_vm0_arg src);
+
+struct u7_vm0_instruction u7_vm0_bitwise_and(u7_error* error,
+                                             struct u7_vm0_arg dst,
+                                             struct u7_vm0_arg lhs,
+                                             struct u7_vm0_arg rhs);
+
+struct u7_vm0_instruction u7_vm0_bitwise_left_shift(u7_error* error,
+                                                    struct u7_vm0_arg dst,
+                                                    struct u7_vm0_arg lhs,
+                                                    struct u7_vm0_arg rhs);
+
+struct u7_vm0_instruction u7_vm0_math_add(u7_error* error,
+                                          struct u7_vm0_arg dst,
+                                          struct u7_vm0_arg lhs,
+                                          struct u7_vm0_arg rhs);
+
+struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
+                                               struct u7_vm0_arg dst,
+                                               struct u7_vm0_arg lhs,
+                                               struct u7_vm0_arg rhs);
 
 /*
 X read_i64
 X write_i64
 X store_i64(local_variable, c)
-bitwise_and_i64(local_variable, local_variable, c)
-bitwise_shift_right_i64(local_variable, local_variable, c)
+X bitwise_and_i64(local_variable, local_variable, c)
+X bitwise_shift_right_i64(local_variable, local_variable, c)
+X math_multiply(local_variable, local_variable, local_variable)
+X math_add(local_variable, local_variable, local_variable)
 jump_if_zero(local_variable, local_label)
 jump_if_not_zero(local_variable, local_label)
-math_multiply(local_variable, local_variable, local_variable)
-math_add(local_variable, local_variable, local_variable)
 */
 
 struct u7_vm0_instruction u7_vm0_yield();

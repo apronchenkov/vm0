@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <github.com/apronchenkov/vm/public/stack_push_pop.h>
 #include <github.com/apronchenkov/vm/public/state.h>
+#include <github.com/apronchenkov/yalog/public/logging_printf.h>
 #include <inttypes.h>
 #include <math.h>
 
@@ -410,6 +411,454 @@ struct u7_vm0_instruction u7_vm0_copy(u7_error* error, struct u7_vm0_arg dst,
     default:
       *error =
           u7_vm0_unsupported_arg_kind_error("u7_vm0_copy", "src", src.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_and_i32vc) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) =
+      *u7_vm0_state_local_i32(state, self->arg2.i64) & self->arg3.i32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_and_i64vc) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) =
+      *u7_vm0_state_local_i64(state, self->arg2.i64) & self->arg3.i64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_and_i32vv) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) =
+      *u7_vm0_state_local_i32(state, self->arg2.i64) &
+      *u7_vm0_state_local_i32(state, self->arg3.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_and_i64vv) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) =
+      *u7_vm0_state_local_i64(state, self->arg2.i64) &
+      *u7_vm0_state_local_i64(state, self->arg3.i64);
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_bitwise_and(u7_error* error,
+                                             struct u7_vm0_arg dst,
+                                             struct u7_vm0_arg lhs,
+                                             struct u7_vm0_arg rhs) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  result.arg2 = lhs.value;
+  result.arg3 = rhs.value;
+  if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I32_CONSTANT) {
+        result.base.execute_fn = bitwise_and_i32vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = bitwise_and_i32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_and_i32",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_and_i32",
+                                                 "lhs", lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I64_CONSTANT) {
+        result.base.execute_fn = bitwise_and_i64vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = bitwise_and_i64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_and_i64",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_and_i64",
+                                                 "lhs", lhs.kind);
+    }
+  } else {
+    *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_and", "dst",
+                                               dst.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i32cv) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = self->arg2.i32;
+  const int32_t rhs = *u7_vm0_state_local_i32(state, self->arg3.i64);
+  if (rhs < -31) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i32: rhs=%" PRId32, rhs));
+  } else if (rhs > 31) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i32: rhs=%" PRId32, rhs));
+  }
+  *dst = (rhs < 0 ? (lhs >> -rhs) : (lhs << rhs));
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i32vc) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) =
+      *u7_vm0_state_local_i32(state, self->arg2.i64) << self->arg3.i32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_right_shift_i32vc) {
+  *u7_vm0_state_local_i32(state, self->arg1.i64) =
+      *u7_vm0_state_local_i32(state, self->arg2.i64) >> self->arg3.i32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i32vv) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = *u7_vm0_state_local_i32(state, self->arg2.i64);
+  const int32_t rhs = *u7_vm0_state_local_i32(state, self->arg3.i64);
+  if (rhs < -31) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i32: rhs=%" PRId32, rhs));
+  } else if (rhs > 31) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i32: rhs=%" PRId32, rhs));
+  }
+  *dst = (rhs < 0 ? (lhs >> -rhs) : (lhs << rhs));
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i64cv) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = self->arg2.i64;
+  const int64_t rhs = *u7_vm0_state_local_i64(state, self->arg3.i64);
+  if (rhs < -63) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i64: rhs=%" PRId64, rhs));
+  } else if (rhs > 63) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i64: rhs=%" PRId64, rhs));
+  }
+  *dst = (rhs < 0 ? (lhs >> -rhs) : (lhs << rhs));
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i64vc) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) =
+      *u7_vm0_state_local_i64(state, self->arg2.i64) << self->arg3.i64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_right_shift_i64vc) {
+  *u7_vm0_state_local_i64(state, self->arg1.i64) =
+      *u7_vm0_state_local_i64(state, self->arg2.i64) >> self->arg3.i64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(bitwise_left_shift_i64vv) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = *u7_vm0_state_local_i64(state, self->arg2.i64);
+  const int64_t rhs = *u7_vm0_state_local_i64(state, self->arg3.i64);
+  if (rhs < -63) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i64: rhs=%" PRId64, rhs));
+  } else if (rhs > 63) {
+    return u7_vm0_panic(
+        state, u7_errnof(EINVAL, "bitwise_left_shift_i64: rhs=%" PRId64, rhs));
+  }
+  *dst = (rhs < 0 ? (lhs >> -rhs) : (lhs << rhs));
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_bitwise_left_shift(u7_error* error,
+                                                    struct u7_vm0_arg dst,
+                                                    struct u7_vm0_arg lhs,
+                                                    struct u7_vm0_arg rhs) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  result.arg2 = lhs.value;
+  result.arg3 = rhs.value;
+  if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I32_CONSTANT) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = bitwise_left_shift_i32cv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error(
+            "u7_vm0_bitwise_left_shift_i32c", "rhs", rhs.kind);
+      }
+    } else if (lhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I32_CONSTANT) {
+        if (rhs.value.i32 < -31) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i32vc: rhs < -31");
+        } else if (rhs.value.i64 > 31) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i32vc: rhs > 31");
+        } else if (rhs.value.i32 == 0) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i32vc: rhs = 0");
+        } else if (rhs.value.i32 < 0) {
+          result.arg3.i32 = -result.arg3.i32;
+          result.base.execute_fn = bitwise_right_shift_i32vc_exec;
+        } else {
+          result.base.execute_fn = bitwise_left_shift_i32vc_exec;
+        }
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = bitwise_left_shift_i32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error(
+            "u7_vm0_bitwise_left_shift_i32v", "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error(
+          "u7_vm0_bitwise_left_shift_i32", "lhs", lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I64_CONSTANT) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = bitwise_left_shift_i64cv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error(
+            "u7_vm0_bitwise_left_shift_i64c", "rhs", rhs.kind);
+      }
+    } else if (lhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I64_CONSTANT) {
+        if (rhs.value.i64 < -63) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i64vc: rhs < -63");
+        } else if (rhs.value.i64 > 63) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i64vc: rhs > 63");
+        } else if (rhs.value.i64 == 0) {
+          *error =
+              u7_errnof(EINVAL, "u7_vm0_bitwise_left_shift_i64vc: rhs = 0");
+        } else if (rhs.value.i64 < 0) {
+          result.arg3.i64 = -result.arg3.i64;
+          result.base.execute_fn = bitwise_right_shift_i64vc_exec;
+        } else {
+          result.base.execute_fn = bitwise_left_shift_i64vc_exec;
+        }
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = bitwise_left_shift_i64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error(
+            "u7_vm0_bitwise_left_shift_i64v", "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error(
+          "u7_vm0_bitwise_left_shift_i64", "lhs", lhs.kind);
+    }
+  } else {
+    *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_bitwise_left_shift",
+                                               "dst", dst.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_i32vc) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = *u7_vm0_state_local_i32(state, self->arg2.i64);
+  const int32_t rhs = self->arg3.i32;
+  if (__builtin_add_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_add: integer overflow: lhs=%" PRId32
+                         " rhs=%" PRId32,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_i32vv) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = *u7_vm0_state_local_i32(state, self->arg2.i64);
+  const int32_t rhs = *u7_vm0_state_local_i32(state, self->arg3.i64);
+  if (__builtin_add_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_add: integer overflow: lhs=%" PRId32
+                         " rhs=%" PRId32,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_i64vc) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = *u7_vm0_state_local_i64(state, self->arg2.i64);
+  const int64_t rhs = self->arg3.i64;
+  if (__builtin_add_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_add: integer overflow: lhs=%" PRId64
+                         " rhs=%" PRId64,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_i64vv) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = *u7_vm0_state_local_i64(state, self->arg2.i64);
+  const int64_t rhs = *u7_vm0_state_local_i64(state, self->arg3.i64);
+  if (__builtin_add_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_add: integer overflow: lhs=%" PRId64
+                         " rhs=%" PRId64,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_math_add(u7_error* error,
+                                          struct u7_vm0_arg dst,
+                                          struct u7_vm0_arg lhs,
+                                          struct u7_vm0_arg rhs) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  result.arg2 = lhs.value;
+  result.arg3 = rhs.value;
+  if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I32_CONSTANT) {
+        result.base.execute_fn = math_add_i32vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = math_add_i32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_i32", "rhs",
+                                                   rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_i32", "lhs",
+                                                 lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I64_CONSTANT) {
+        result.base.execute_fn = math_add_i64vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = math_add_i64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_i64", "rhs",
+                                                   rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_i64", "lhs",
+                                                 lhs.kind);
+    }
+  } else {
+    *error =
+        u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add", "dst", dst.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_i32vc) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = *u7_vm0_state_local_i32(state, self->arg2.i64);
+  const int32_t rhs = self->arg3.i32;
+  if (__builtin_smul_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_multiply: integer overflow: lhs=%" PRId32
+                         " rhs=%" PRId32,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_i32vv) {
+  int32_t* const dst = u7_vm0_state_local_i32(state, self->arg1.i64);
+  const int32_t lhs = *u7_vm0_state_local_i32(state, self->arg2.i64);
+  const int32_t rhs = *u7_vm0_state_local_i32(state, self->arg3.i64);
+  if (__builtin_mul_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_multiply: integer overflow: lhs=%" PRId32
+                         " rhs=%" PRId32,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_i64vc) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = *u7_vm0_state_local_i64(state, self->arg2.i64);
+  const int64_t rhs = self->arg3.i64;
+  if (__builtin_mul_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_multiply: integer overflow: lhs=%" PRId64
+                         " rhs=%" PRId64,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_i64vv) {
+  int64_t* const dst = u7_vm0_state_local_i64(state, self->arg1.i64);
+  const int64_t lhs = *u7_vm0_state_local_i64(state, self->arg2.i64);
+  const int64_t rhs = *u7_vm0_state_local_i64(state, self->arg3.i64);
+  if (__builtin_mul_overflow(lhs, rhs, dst)) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE,
+                         "u7_vm0_math_multiply: integer overflow: lhs=%" PRId64
+                         " rhs=%" PRId64,
+                         lhs, rhs));
+  }
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
+                                               struct u7_vm0_arg dst,
+                                               struct u7_vm0_arg lhs,
+                                               struct u7_vm0_arg rhs) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = dst.value;
+  result.arg2 = lhs.value;
+  result.arg3 = rhs.value;
+  if (dst.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I32_CONSTANT) {
+        result.base.execute_fn = math_multiply_i32vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I32_VARIABLE) {
+        result.base.execute_fn = math_multiply_i32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_i32",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_i32",
+                                                 "lhs", lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_I64_CONSTANT) {
+        result.base.execute_fn = math_multiply_i64vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_I64_VARIABLE) {
+        result.base.execute_fn = math_multiply_i64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_i64",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_i64",
+                                                 "lhs", lhs.kind);
+    }
+  } else {
+    *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply", "dst",
+                                               dst.kind);
   }
   return result;
 }
