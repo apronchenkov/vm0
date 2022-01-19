@@ -715,6 +715,32 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_i64vv) {
   return true;
 }
 
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_f32vc) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) =
+      *u7_vm0_state_local_f32(state, self->arg2.i64) + self->arg3.f32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_f32vv) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) =
+      *u7_vm0_state_local_f32(state, self->arg2.i64) +
+      *u7_vm0_state_local_f32(state, self->arg3.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_f64vc) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) =
+      *u7_vm0_state_local_f64(state, self->arg2.i64) + self->arg3.f64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_add_f64vv) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) =
+      *u7_vm0_state_local_f64(state, self->arg2.i64) +
+      *u7_vm0_state_local_f64(state, self->arg3.i64);
+  return true;
+}
+
 struct u7_vm0_instruction u7_vm0_math_add(u7_error* error,
                                           struct u7_vm0_arg dst,
                                           struct u7_vm0_arg lhs,
@@ -752,6 +778,34 @@ struct u7_vm0_instruction u7_vm0_math_add(u7_error* error,
       }
     } else {
       *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_i64", "lhs",
+                                                 lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_F32_CONSTANT) {
+        result.base.execute_fn = math_add_f32vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+        result.base.execute_fn = math_add_f32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_f32", "rhs",
+                                                   rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_f32", "lhs",
+                                                 lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_F64_CONSTANT) {
+        result.base.execute_fn = math_add_f64vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+        result.base.execute_fn = math_add_f64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_f64", "rhs",
+                                                   rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_add_f64", "lhs",
                                                  lhs.kind);
     }
   } else {
@@ -817,6 +871,32 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_i64vv) {
   return true;
 }
 
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_f32vc) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) =
+      *u7_vm0_state_local_f32(state, self->arg2.i64) * self->arg3.f32;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_f32vv) {
+  *u7_vm0_state_local_f32(state, self->arg1.i64) =
+      *u7_vm0_state_local_f32(state, self->arg2.i64) *
+      *u7_vm0_state_local_f32(state, self->arg3.i64);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_f64vc) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) =
+      *u7_vm0_state_local_f64(state, self->arg2.i64) * self->arg3.f64;
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(math_multiply_f64vv) {
+  *u7_vm0_state_local_f64(state, self->arg1.i64) =
+      *u7_vm0_state_local_f64(state, self->arg2.i64) *
+      *u7_vm0_state_local_f64(state, self->arg3.i64);
+  return true;
+}
+
 struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
                                                struct u7_vm0_arg dst,
                                                struct u7_vm0_arg lhs,
@@ -856,9 +936,195 @@ struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
       *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_i64",
                                                  "lhs", lhs.kind);
     }
+  } else if (dst.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_F32_CONSTANT) {
+        result.base.execute_fn = math_multiply_f32vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_F32_VARIABLE) {
+        result.base.execute_fn = math_multiply_f32vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_f32",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_f32",
+                                                 "lhs", lhs.kind);
+    }
+  } else if (dst.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+    if (lhs.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+      if (rhs.kind == U7_VM0_ARG_KIND_F64_CONSTANT) {
+        result.base.execute_fn = math_multiply_f64vc_exec;
+      } else if (rhs.kind == U7_VM0_ARG_KIND_F64_VARIABLE) {
+        result.base.execute_fn = math_multiply_f64vv_exec;
+      } else {
+        *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_f64",
+                                                   "rhs", rhs.kind);
+      }
+    } else {
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply_f64",
+                                                 "lhs", lhs.kind);
+    }
   } else {
     *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_math_multiply", "dst",
                                                dst.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_zero_i32) {
+  const int32_t src = *u7_vm0_state_local_i32(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE, "u7_jump_if_zero: label is out of range: %zu",
+                         target));
+  }
+  state->ip = (src == 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_zero_i64) {
+  const int64_t src = *u7_vm0_state_local_i64(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE, "u7_jump_if_zero: label is out of range: %zu",
+                         target));
+  }
+  state->ip = (src == 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_zero_f32) {
+  const float src = *u7_vm0_state_local_f32(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE, "u7_jump_if_zero: label is out of range: %zu",
+                         target));
+  }
+  state->ip = (src == 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_zero_f64) {
+  const double src = *u7_vm0_state_local_f64(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state, u7_errnof(ERANGE, "u7_jump_if_zero: label is out of range: %zu",
+                         target));
+  }
+  state->ip = (src == 0 ? target : state->ip);
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_zero(u7_error* error,
+                                              struct u7_vm0_arg src,
+                                              struct u7_vm0_label label) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = src.value;
+  result.arg2.i64 = (int64_t)label.offset;
+  switch (src.kind) {
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      result.base.execute_fn = jump_if_zero_i32_exec;
+      break;
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      result.base.execute_fn = jump_if_zero_i64_exec;
+      break;
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      result.base.execute_fn = jump_if_zero_f32_exec;
+      break;
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      result.base.execute_fn = jump_if_zero_f64_exec;
+      break;
+    default:
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_jump_if_zero", "src",
+                                                 src.kind);
+  }
+  return result;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_not_zero_i32) {
+  const int32_t src = *u7_vm0_state_local_i32(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state,
+        u7_errnof(ERANGE, "u7_jump_if_not_zero: label is out of range: %zu",
+                  target));
+  }
+  state->ip = (src != 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_not_zero_i64) {
+  const int64_t src = *u7_vm0_state_local_i64(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state,
+        u7_errnof(ERANGE, "u7_jump_if_not_zero: label is out of range: %zu",
+                  target));
+  }
+  state->ip = (src != 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_not_zero_f32) {
+  const float src = *u7_vm0_state_local_f32(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state,
+        u7_errnof(ERANGE, "u7_jump_if_not_zero: label is out of range: %zu",
+                  target));
+  }
+  state->ip = (src != 0 ? target : state->ip);
+  return true;
+}
+
+U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_not_zero_f64) {
+  const double src = *u7_vm0_state_local_f64(state, self->arg1.i64);
+  const size_t target = (size_t)self->arg2.i64;
+  if (target >= state->instructions_size) {
+    return u7_vm0_panic(
+        state,
+        u7_errnof(ERANGE, "u7_jump_if_not_zero: label is out of range: %zu",
+                  target));
+  }
+  state->ip = (src != 0 ? target : state->ip);
+  return true;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_not_zero(u7_error* error,
+                                                  struct u7_vm0_arg src,
+                                                  struct u7_vm0_label label) {
+  struct u7_vm0_instruction result = {0};
+  if (error->error_code != 0) {
+    return result;
+  }
+  result.arg1 = src.value;
+  result.arg2.i64 = (int64_t)label.offset;
+  switch (src.kind) {
+    case U7_VM0_ARG_KIND_I32_VARIABLE:
+      result.base.execute_fn = jump_if_not_zero_i32_exec;
+      break;
+    case U7_VM0_ARG_KIND_I64_VARIABLE:
+      result.base.execute_fn = jump_if_not_zero_i64_exec;
+      break;
+    case U7_VM0_ARG_KIND_F32_VARIABLE:
+      result.base.execute_fn = jump_if_not_zero_f32_exec;
+      break;
+    case U7_VM0_ARG_KIND_F64_VARIABLE:
+      result.base.execute_fn = jump_if_not_zero_f64_exec;
+      break;
+    default:
+      *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_jump_if_not_zero",
+                                                 "src", src.kind);
   }
   return result;
 }

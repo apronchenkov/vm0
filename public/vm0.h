@@ -107,6 +107,10 @@ struct u7_vm0_arg {
   union u7_vm0_value value;
 };
 
+struct u7_vm0_label {
+  int64_t offset;
+};
+
 struct u7_vm0_instruction {
   struct u7_vm_instruction base;
   union u7_vm0_value arg1;
@@ -141,6 +145,14 @@ struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
                                                struct u7_vm0_arg lhs,
                                                struct u7_vm0_arg rhs);
 
+struct u7_vm0_instruction u7_vm0_jump_if_zero(u7_error* error,
+                                              struct u7_vm0_arg src,
+                                              struct u7_vm0_label label);
+
+struct u7_vm0_instruction u7_vm0_jump_if_not_zero(u7_error* error,
+                                                  struct u7_vm0_arg src,
+                                                  struct u7_vm0_label label);
+
 /*
 X read_i64
 X write_i64
@@ -149,8 +161,8 @@ X bitwise_and_i64(local_variable, local_variable, c)
 X bitwise_shift_right_i64(local_variable, local_variable, c)
 X math_multiply(local_variable, local_variable, local_variable)
 X math_add(local_variable, local_variable, local_variable)
-jump_if_zero(local_variable, local_label)
-jump_if_not_zero(local_variable, local_label)
+X jump_if_zero(local_variable, local_label)
+X jump_if_not_zero(local_variable, local_label)
 */
 
 struct u7_vm0_instruction u7_vm0_yield();
