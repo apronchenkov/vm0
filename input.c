@@ -12,8 +12,12 @@ static u7_error read_i32(struct u7_vm0_input* self, int32_t* result) {
     return u7_ok();
   } else if (0 == ret) {
     return u7_errnof(EINVAL, "read_i32: incompatible input");
-  } else {
+  } else if (errno != 0) {
     return u7_errnof(errno, "read_i32: failed");
+  } else if (feof(stdin)) {
+    return u7_errnof(ENODATA, "read_i32: eof");
+  } else {
+    return u7_errnof(EINVAL, "read_i32: unknown error");
   }
 }
 
@@ -24,8 +28,12 @@ static u7_error read_i64(struct u7_vm0_input* self, int64_t* result) {
     return u7_ok();
   } else if (0 == ret) {
     return u7_errnof(EINVAL, "read_i64: incompatible input");
-  } else {
+  } else if (errno != 0) {
     return u7_errnof(errno, "read_i64: failed");
+  } else if (feof(stdin)) {
+    return u7_errnof(ENODATA, "read_i64: eof");
+  } else {
+    return u7_errnof(EINVAL, "read_i64: unknown error");
   }
 }
 
@@ -36,8 +44,12 @@ static u7_error read_f32(struct u7_vm0_input* self, float* result) {
     return u7_ok();
   } else if (0 == ret) {
     return u7_errnof(EINVAL, "read_f32: incompatible input");
-  } else {
+  } else if (errno != 0) {
     return u7_errnof(errno, "read_f32: failed");
+  } else if (feof(stdin)) {
+    return u7_errnof(ENODATA, "read_f32: eof");
+  } else {
+    return u7_errnof(EINVAL, "read_f32: unknown error");
   }
 }
 
@@ -48,8 +60,12 @@ static u7_error read_f64(struct u7_vm0_input* self, double* result) {
     return u7_ok();
   } else if (0 == ret) {
     return u7_errnof(EINVAL, "read_f64: incompatible input");
-  } else {
+  } else if (errno != 0) {
     return u7_errnof(errno, "read_f64: failed");
+  } else if (feof(stdin)) {
+    return u7_errnof(ENODATA, "read_f64: eof");
+  } else {
+    return u7_errnof(EINVAL, "read_f64: unknown error");
   }
 }
 
