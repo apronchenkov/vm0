@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <github.com/apronchenkov/error/public/error.h>
 #include <github.com/apronchenkov/vm/public/state.h>
+#include <github.com/apronchenkov/yalog/public/basic.h>
+#include <github.com/apronchenkov/yalog/public/logging_printf.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -266,9 +268,11 @@ u7_error Main() {
 }
 
 int main() {
+  YalogSetConfig(YalogCreatePlainConfig(YalogCreateStderrSink(YALOG_INFO)));
   u7_error error = Main();
   if (error.error_code) {
-    fprintf(stderr, "Main: %" U7_ERROR_FMT "\n", U7_ERROR_FMT_PARAMS(error));
+    YALOG_PRINTF(ERROR, "Main: %" U7_ERROR_FMT "\n",
+                 U7_ERROR_FMT_PARAMS(error));
     u7_error_release(error);
     return -1;
   }
