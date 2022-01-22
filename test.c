@@ -178,8 +178,10 @@ u7_error Main() {
       .value = {.i64 = -1},
   };
 
-  struct u7_vm0_label label_loop = {.offset = 9};
-  struct u7_vm0_label label_next = {.offset = 23};
+  struct u7_vm0_arg label_loop = {.kind = U7_VM0_ARG_KIND_I64_LABEL,
+                                  .value = {.i32 = 9}};
+  struct u7_vm0_arg label_next = {.kind = U7_VM0_ARG_KIND_I64_LABEL,
+                                  .value = {.i32 = 23}};
 
   u7_error error = u7_ok();
   struct u7_vm0_instruction is[] = {

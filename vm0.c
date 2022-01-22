@@ -80,6 +80,9 @@ __attribute__((noinline)) static u7_error u7_vm0_unsupported_arg_kind_error(
       return u7_errnof(EINVAL,
                        "%s: incompatible argument kind: %s: float64 variable",
                        instruction_name, arg_name);
+    case U7_VM0_ARG_KIND_I64_LABEL:
+      return u7_errnof(EINVAL, "%s: incompatible argument kind: %s: label",
+                       instruction_name, arg_name);
   }
   return u7_errnof(EINVAL,
                    "%s: incompatible argument kind: %s: unknown arg kind (%d)",
@@ -1028,12 +1031,17 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_zero_f64) {
 
 struct u7_vm0_instruction u7_vm0_jump_if_zero(u7_error* error,
                                               struct u7_vm0_arg src,
-                                              struct u7_vm0_label label) {
+                                              struct u7_vm0_arg label) {
   struct u7_vm0_instruction result = {
       .arg1 = src.value,
-      .arg2.i64 = (int64_t)label.offset,
+      .arg2 = label.value,
   };
   if (error->error_code != 0) {
+    return result;
+  }
+  if (label.kind != U7_VM0_ARG_KIND_I64_LABEL) {
+    *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_jump_if_zero", "label",
+                                               label.kind);
     return result;
   }
   switch (src.kind) {
@@ -1110,15 +1118,19 @@ U7_VM0_DEFINE_INSTRUCTION_EXEC(jump_if_not_zero_f64) {
 
 struct u7_vm0_instruction u7_vm0_jump_if_not_zero(u7_error* error,
                                                   struct u7_vm0_arg src,
-                                                  struct u7_vm0_label label) {
+                                                  struct u7_vm0_arg label) {
   struct u7_vm0_instruction result = {
       .arg1 = src.value,
-      .arg2.i64 = (int64_t)label.offset,
+      .arg2 = label.value,
   };
   if (error->error_code != 0) {
     return result;
   }
-
+  if (label.kind != U7_VM0_ARG_KIND_I64_LABEL) {
+    *error = u7_vm0_unsupported_arg_kind_error("u7_vm0_jump_if_not_zero",
+                                               "label", label.kind);
+    return result;
+  }
   switch (src.kind) {
     case U7_VM0_ARG_KIND_I32_VARIABLE:
       result.base.execute_fn = jump_if_not_zero_i32_exec;

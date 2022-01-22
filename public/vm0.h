@@ -100,15 +100,12 @@ enum u7_vm0_arg_kind {
   U7_VM0_ARG_KIND_I64_VARIABLE,
   U7_VM0_ARG_KIND_F32_VARIABLE,
   U7_VM0_ARG_KIND_F64_VARIABLE,
+  U7_VM0_ARG_KIND_I64_LABEL,
 };
 
 struct u7_vm0_arg {
   enum u7_vm0_arg_kind kind;
   union u7_vm0_value value;
-};
-
-struct u7_vm0_label {
-  int64_t offset;
 };
 
 struct u7_vm0_instruction {
@@ -147,11 +144,11 @@ struct u7_vm0_instruction u7_vm0_math_multiply(u7_error* error,
 
 struct u7_vm0_instruction u7_vm0_jump_if_zero(u7_error* error,
                                               struct u7_vm0_arg src,
-                                              struct u7_vm0_label label);
+                                              struct u7_vm0_arg label);
 
 struct u7_vm0_instruction u7_vm0_jump_if_not_zero(u7_error* error,
                                                   struct u7_vm0_arg src,
-                                                  struct u7_vm0_label label);
+                                                  struct u7_vm0_arg label);
 
 struct u7_vm0_instruction u7_vm0_yield();
 struct u7_vm0_instruction u7_vm0_ret();
